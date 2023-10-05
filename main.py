@@ -1,65 +1,69 @@
-import math
-import os
+import os, math
+from datas import zeroing as zing
 
-def clear_screen(): # clears the screen
+DASHES_LENGHT = 35
+
+def clear_screen(): # clear the screen
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def print_header(): # prints the header
-    print('-' * 30)
-    print('Arma 3 real range calculator')
-    print('-' * 30)
+def menu_screen(): # main menu provider
+    print('-' * DASHES_LENGHT)
+    print('Arma 3 Dot Calculator')
+    print('-' * DASHES_LENGHT)
 
-def get_laser_designator_info(): # returns your laser designator range, elevation and the true distance between you and your target
-    range_input = input('Range: ').replace(',', '.')
-    elevation_input = input('Elevation: ').replace(',', '.')
-    try: 
-        range_input = float(range_input)
-        elevation_input = float(elevation_input)
-    except:
-        raise ValueError('You have to type only numbers for your distance and elevation.')
+def laser_designator_infos(): # informations provided by your laser designator that gets you the real distance between you and your target
+    while True:
+        laser_range = input('Laser designator range: ').replace(',', '.')
+        laser_elevation = input('Laser designator elevation: ').replace(',', '.')
+
+        try:
+            laser_range = float(laser_range)
+            laser_elevation = float(laser_elevation)
+            cosine_degrees = laser_elevation * (math.pi / 180)
+            real_distance = math.cos(cosine_degrees) * laser_range
+
+            return laser_range, laser_elevation, round(real_distance)
+       
+        except ValueError:
+            clear_screen()
+            print('Only numbers, please. Try again.')
+            menu_screen()
    
-    cosine_degrees = elevation_input * (math.pi / 180)
-    real_distance = round(range_input * math.cos(cosine_degrees))
-   
-    return range_input, real_distance, elevation_input
+        except Exception as error:
+            clear_screen()
+            print(f'Unknow error: {error}. Try again!')
+            menu_screen()
 
-def find_closest_zeroing(real_distance, zeroing_options): # finds the right closest to main cross zeroing
-    closest_zero = min(zeroing_options, key=lambda x: abs(x - real_distance))
-    return closest_zero
+def get_best_zeroing(real_distance, zeroing_options): # gets you the best zeroing option for your lrps scope
+    return min(zeroing_options, key=lambda x: abs(x - real_distance))
 
-def find_dot_amount(real_distance, dot_distances): # get how many dots you have to consider
-    closest_zero_dot = min(dot_distances.keys(), key=lambda x: abs(x - real_distance))
-    return dot_distances[closest_zero_dot]
-
-def main():
-    zeroing_options = [
-        300, 400, 500, 600, 700, 800, 900, 1000,
-        1100, 1200, 1300, 1400, 1500, 1600, 1700,
-        1800, 1900, 2000, 2100, 2200
-    ]
-
-    dot_distances = {
-        300: 100, 400: 94, 500: 88, 600: 82, 700: 77,
-        800: 72, 900: 68, 1000: 64, 1100: 60, 1200: 56,
-        1300: 53, 1400: 50, 1500: 47, 1600: 44, 1700: 41,
-        1800: 39, 1900: 36, 2000: 34, 2100: 32, 2200: 30
-    }
+def get_true_mil_dot_value(best_zeroing, dot_distances): # gets you the real value for each mildot from your best zeroing option
+    return dot_distances[min(dot_distances.keys(), key=lambda x: abs(x - best_zeroing))]
+         
+def main(): # runs the program
+    zeroing_options = zing.ZEROING_OPTIONS
+    dot_distances = zing.DOT_DISTANCES
 
     while True:
-        print_header()
-        range_input, real_distance, elevation_input = get_laser_designator_info()
-        closest_zero = find_closest_zeroing(real_distance, zeroing_options)
-        dot_value = find_dot_amount(real_distance, dot_distances)
-        qty_dot = round((real_distance - closest_zero) / dot_value, 1)
-
+        menu_screen()
+        laser_range, laser_elevation, real_distance = laser_designator_infos()
+        best_zeroing = get_best_zeroing(real_distance, zeroing_options)
+        true_mil_dot = get_true_mil_dot_value(best_zeroing, dot_distances)
+        scope_dots = round((real_distance - best_zeroing) / true_mil_dot, 2)
         clear_screen()
-        print('-' * 30)
-        print(f'Laser designator range: {round(range_input)}')
-        print(f'Elevation: {elevation_input}')
-        print(f'Real range: {real_distance}')
-        print(f'Zeroing: {closest_zero}')
-        print(f'Each mil dot range: {dot_value}m')
-        print(f'Dots: {qty_dot} dots')
 
-if __name__ == "__main__":
-    main()
+        print('-' * DASHES_LENGHT)
+        print('Laser range:', round(laser_range), 'meters')
+        print('Laser elevation:', laser_elevation, 'degrees')
+        print('Real distance:', real_distance, 'meters')
+        print('Best zeroing:', best_zeroing)
+        print('Each mildot:', true_mil_dot, 'meters')
+        print('Dots:', scope_dots, 'dots')
+
+if __name__ == '__main__': # start the program
+    try:
+        main()
+    except KeyboardInterrupt:
+        clear_screen()
+        print('Program stopped by the user.')
+        exit(0)
